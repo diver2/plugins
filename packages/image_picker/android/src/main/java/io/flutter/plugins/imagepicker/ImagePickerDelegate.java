@@ -369,6 +369,14 @@ public class ImagePickerDelegate
   private void handleChooseImageResult(int resultCode, Intent data) {
     if (resultCode == Activity.RESULT_OK && data != null) {
       String path = fileUtils.getPathFromUri(activity, data.getData());
+
+      // is path a valid path / can I read from it?
+      if (path == null || !(new File(path).canRead())) {
+        finishWithError("ACCESS_ERROR",
+                "Cannot read your photo. Please pick one in the gallery, not in other folders such as downloads. Some Android versions mishandle those folders.");
+        return;
+      }
+
       handleImageResult(path, false);
       return;
     }
