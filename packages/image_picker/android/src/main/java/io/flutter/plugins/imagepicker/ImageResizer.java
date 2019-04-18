@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
@@ -26,13 +27,14 @@ class ImageResizer {
    *
    * <p>If no resizing is needed, returns the path for the original image.
    */
-  String resizeImageIfNeeded(String imagePath, Double maxWidth, Double maxHeight) {
+//  String resizeImageIfNeeded(String imagePath, Double maxWidth, Double maxHeight) {
+  byte[] resizeImageIfNeeded(String imagePath, Double maxWidth, Double maxHeight) {
     boolean shouldScale = maxWidth != null || maxHeight != null;
 
     if (!shouldScale) {
-      return imagePath;
+      return readBytesFromFile(imagePath);
     }
-
+/*
     try {
       File scaledImage = resizedImage(imagePath, maxWidth, maxHeight);
       exifDataCopier.copyExif(imagePath, scaledImage.getPath());
@@ -40,11 +42,18 @@ class ImageResizer {
       return scaledImage.getPath();
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }*/
+    try {
+      return resizedImage(imagePath, maxWidth, maxHeight);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
-  private File resizedImage(String path, Double maxWidth, Double maxHeight) throws IOException {
-    Bitmap bmp = BitmapFactory.decodeFile(path);
+  //private File resizedImage(String path, Double maxWidth, Double maxHeight) throws IOException {
+  private byte[] resizedImage(String path, Double maxWidth, Double maxHeight) throws IOException {
+  Bitmap bmp = BitmapFactory.decodeFile(path);
     double originalWidth = bmp.getWidth() * 1.0;
     double originalHeight = bmp.getHeight() * 1.0;
 
@@ -89,6 +98,11 @@ class ImageResizer {
     scaledBmp.compress(
         saveAsPNG ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG, 100, outputStream);
 
+    byte[] byteArray = outputStream.toByteArray();
+    outputStream.close();
+    scaledBmp.recycle();
+    return byteArray;
+    /*
     String[] pathParts = path.split("/");
     String imageName = pathParts[pathParts.length - 1];
 
@@ -98,5 +112,30 @@ class ImageResizer {
     fileOutput.close();
 
     return imageFile;
+    */
+  }
+
+  // transform a File into a byte array (personal note, it was private static byte[] before...)
+  private byte[] readBytesFromFile(String filePath) {
+    FileInputStream fileInputStream = null;
+    byte[] bytesArray = null;
+    try {
+      File file = new File(filePath);
+      bytesArray = new byte[(int) file.length()];
+      //read file into bytes[]
+      fileInputStream = new FileInputStream(file);
+      fileInputStream.read(bytesArray);
+    } catch (IOException e) {
+      e.printStackTrace();
+    } finally {
+      if (fileInputStream != null) {
+        try {
+          fileInputStream.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    return bytesArray;
   }
 }

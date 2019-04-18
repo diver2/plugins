@@ -435,9 +435,15 @@ public class ImagePickerDelegate
       Double maxWidth = methodCall.argument("maxWidth");
       Double maxHeight = methodCall.argument("maxHeight");
 
-      String finalImagePath = imageResizer.resizeImageIfNeeded(path, maxWidth, maxHeight);
-      finishWithSuccess(finalImagePath);
+      //String finalImagePath = imageResizer.resizeImageIfNeeded(path, maxWidth, maxHeight);
+      byte[] finalImage = imageResizer.resizeImageIfNeeded(path, maxWidth, maxHeight);
+      //TEMP CODE
+      //byte[] result = readBytesFromFile(finalImagePath);
+      //pendingResult.success(result);
+      //clearMethodCallAndResult();
 
+      //finishWithSuccess(finalImagePath);
+      finishWithSuccess(finalImage);
       //delete original file if scaled
       if (!finalImagePath.equals(path) && shouldDeleteOriginalIfScaled) {
         new File(path).delete();
@@ -449,7 +455,7 @@ public class ImagePickerDelegate
 
   private void handleVideoResult(String path) {
     if (pendingResult != null) {
-      finishWithSuccess(path);
+      finishVideoWithSuccess(path);
     } else {
       throw new IllegalStateException("Received video from picker that was not requested");
     }
@@ -466,10 +472,17 @@ public class ImagePickerDelegate
     return true;
   }
 
-  private void finishWithSuccess(String imagePath) {
-    pendingResult.success(imagePath);
+  //private void finishWithSuccess(String imagePath) {
+  private void finishWithSuccess(byte[] image) {
+    pendingResult.success(image);
     clearMethodCallAndResult();
   }
+
+  private void finishVideoWithSuccess(String videoPath) {
+    pendingResult.success(videoPath);
+    clearMethodCallAndResult();
+  }
+
 
   private void finishWithAlreadyActiveError(MethodChannel.Result result) {
     result.error("already_active", "Image picker is already active", null);

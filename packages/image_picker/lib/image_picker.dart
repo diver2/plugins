@@ -29,7 +29,7 @@ class ImagePicker {
   /// If specified, the image will be at most [maxWidth] wide and
   /// [maxHeight] tall. Otherwise the image will be returned at it's
   /// original width and height.
-  static Future<File> pickImage({
+  static Future<dynamic> pickImage({
     @required ImageSource source,
     double maxWidth,
     double maxHeight,
@@ -47,7 +47,7 @@ class ImagePicker {
     // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
     // https://github.com/flutter/flutter/issues/26431
     // ignore: strong_mode_implicit_dynamic_method
-    final String path = await _channel.invokeMethod(
+    final dynamic byteArray = await _channel.invokeMethod(
       'pickImage',
       <String, dynamic>{
         'source': source.index,
@@ -56,7 +56,7 @@ class ImagePicker {
       },
     );
 
-    return path == null ? null : File(path);
+    return byteArray;
   }
 
   static Future<File> pickVideo({
