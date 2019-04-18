@@ -445,9 +445,9 @@ public class ImagePickerDelegate
       //finishWithSuccess(finalImagePath);
       finishWithSuccess(finalImage);
       //delete original file if scaled
-      if (!finalImagePath.equals(path) && shouldDeleteOriginalIfScaled) {
-        new File(path).delete();
-      }
+      //if (!finalImagePath.equals(path) && shouldDeleteOriginalIfScaled) {
+      //  new File(path).delete();
+      // }
     } else {
       throw new IllegalStateException("Received image from picker that was not requested");
     }
