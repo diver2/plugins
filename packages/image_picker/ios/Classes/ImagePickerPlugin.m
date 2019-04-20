@@ -14,6 +14,8 @@
 
 static const int SOURCE_CAMERA = 0;
 static const int SOURCE_GALLERY = 1;
+int exiting;
+bool stillNotChosen;
 
 @implementation FLTImagePickerPlugin {
   FlutterResult _result;
@@ -23,6 +25,7 @@ static const int SOURCE_GALLERY = 1;
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
+    NSLog(@"register");
   FlutterMethodChannel *channel =
       [FlutterMethodChannel methodChannelWithName:@"plugins.flutter.io/image_picker"
                                   binaryMessenger:[registrar messenger]];
@@ -34,8 +37,11 @@ static const int SOURCE_GALLERY = 1;
 }
 
 - (instancetype)initWithViewController:(UIViewController *)viewController {
+    NSLog(@"init1");
   self = [super init];
   if (self) {
+      NSLog(@"init2");
+
     _viewController = viewController;
     _imagePickerController = [[UIImagePickerController alloc] init];
   }
@@ -43,6 +49,8 @@ static const int SOURCE_GALLERY = 1;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
+    NSLog(@"handleMethod");
+
   if (_result) {
     _result([FlutterError errorWithCode:@"multiple_request"
                                 message:@"Cancelled by a second request"
@@ -51,6 +59,9 @@ static const int SOURCE_GALLERY = 1;
   }
 
   if ([@"pickImage" isEqualToString:call.method]) {
+      exiting = 0;
+      stillNotChosen = true;
+
     _imagePickerController.modalPresentationStyle = UIModalPresentationCurrentContext;
     _imagePickerController.delegate = self;
     _imagePickerController.mediaTypes = @[ (NSString *)kUTTypeImage ];
@@ -172,38 +183,101 @@ static const int SOURCE_GALLERY = 1;
 }
 
 - (void)showPhotoLibrary {
-  // No need to check if SourceType is available. It always is.
-  _imagePickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
-  [_viewController presentViewController:_imagePickerController animated:YES completion:nil];
+    NSLog(@"showPhoto");
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self->_imagePickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+        [self->_viewController presentViewController:self->_imagePickerController animated:YES completion:nil];
+        });
+/*    [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+        switch (status) {
+            case PHAuthorizationStatusAuthorized:
+                // No need to check if SourceType is available. It always is.
+                //dispatch_async(dispatch_get_main_queue(), ^{
+                
+                NSLog(@"PHAuthorizationStatusAuthorized");
+                break;
+            case PHAuthorizationStatusDenied:
+                NSLog(@"PHAuthorizationStatusDenied");
+                break;
+            case PHAuthorizationStatusNotDetermined:
+                NSLog(@"PHAuthorizationStatusNotDetermined");
+                break;
+            case PHAuthorizationStatusRestricted:
+                NSLog(@"PHAuthorizationStatusRestricted");
+                break;
+        }
+    }];
+        
+    });*/
 }
+
+/*
+- (void)navigationController:(UINavigationController *)navigationController
+       didShowViewController:
+                     {
+    NSLog(@"DID SHOW");
+}*/
+/*
+-(void) viewWillAppear:(BOOL)animated {
+    //[self.child beginAppearanceTransition: YES animated: animated];
+}
+*/
+
+
 
 - (void)imagePickerController:(UIImagePickerController *)picker
     didFinishPickingMediaWithInfo:(NSDictionary<NSString *, id> *)info {
-  NSURL *videoURL = [info objectForKey:UIImagePickerControllerMediaURL];
-  UIImage *image = [info objectForKey:UIImagePickerControllerEditedImage];
-  [_imagePickerController dismissViewControllerAnimated:YES completion:nil];
+  
   // The method dismissViewControllerAnimated does not immediately prevent
   // further didFinishPickingMediaWithInfo invocations. A nil check is necessary
   // to prevent below code to be unwantly executed multiple times and cause a
   // crash.
+    NSLog(@"DID FINISH PICKING STUFF");
+    if (stillNotChosen) {
+        stillNotChosen = false;
+        NSLog(@"HERE DISMISSING STUFF");
+        NSURL *videoURL = [info objectForKey:UIImagePickerControllerMediaURL];
+        UIImage *image = [info objectForKey:UIImagePickerControllerEditedImage];
+        [_imagePickerController dismissViewControllerAnimated:YES completion:nil];
+    
   if (!_result) {
+      NSLog(@"RESULT NEGATIVE SOMETHING");
     return;
   }
   if (videoURL != nil) {
     _result(videoURL.description);
   } else {
     if (image == nil) {
-      image = [info objectForKey:UIImagePickerControllerOriginalImage];
+        NSLog(@"SOMETHING234");
+        image = [info objectForKey:UIImagePickerControllerOriginalImage];
+        if (image == nil)
+        {
+            NSLog(@"NEGATIVE IMAGE RETURNED");
+            return;
+        }
     }
     image = [self normalizedImage:image];
+    if (image == nil)
+    {
+        NSLog(@"NEGATIVE IMAGE RETURNED2");
+        return;
+    }
+    NSLog(@"SOMETHING BIGGER");
 
     NSNumber *maxWidth = [_arguments objectForKey:@"maxWidth"];
     NSNumber *maxHeight = [_arguments objectForKey:@"maxHeight"];
 
     if (maxWidth != (id)[NSNull null] || maxHeight != (id)[NSNull null]) {
       image = [self scaledImage:image maxWidth:maxWidth maxHeight:maxHeight];
+        if (image == nil)
+        {
+            NSLog(@"NEGATIVE IMAGE RETURNED3");
+            return;
+        }
     }
-
+    
+    /*
     BOOL saveAsPNG = [self hasAlpha:image];
     NSData *data =
         saveAsPNG ? UIImagePNGRepresentation(image) : UIImageJPEGRepresentation(image, 1.0);
@@ -220,19 +294,50 @@ static const int SOURCE_GALLERY = 1;
                                   message:@"Temporary file could not be created"
                                   details:nil]);
     }
+    */
+    NSData *data = UIImagePNGRepresentation(image);
+      if (data == nil) {
+          NSLog(@"data = nil");
+          return;
+      }
+//    CGDataProviderRef provider = CGImageGetDataProvider(image.CGImage);
+ //   NSData* data = (id)CFBridgingRelease(CGDataProviderCopyData(provider));
+    //FlutterStandardTypedData *u8 = [FlutterStandardMessageCodec decode:data];
+    //const uint8_t* bytes = [data bytes];
+    //_result((FlutterStandardTypedData *) data);
+      
+//    CFDataRef pixelData = CGDataProviderCopyData(CGImageGetDataProvider(image.CGImage));
+  //  unsigned char * data = (unsigned char *)CFDataGetBytePtr(pixelData);
+    //_result((id*)data);
+      
+     // FlutterStandardMessageCodec *codec1 = [FlutterStandardMessageCodec sharedInstance];
+     // FlutterStandardTypedData *x = [codec1 decode:data];
+    _result([FlutterStandardTypedData typedDataWithBytes:data]);
+      
+  }
   }
 
+    //EM Changes
   _result = nil;
   _arguments = nil;
 }
+
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+    NSLog(@"EXITING");
+    if (exiting==0) {
   [_imagePickerController dismissViewControllerAnimated:YES completion:nil];
-  _result(nil);
+        NSString *res = @"cancelled";
+        _result(res);
+        NSLog(@"inside exit == 0");
+
+        exiting = 1;
+    }
 
   _result = nil;
   _arguments = nil;
 }
+
 
 // The way we save images to the tmp dir currently throws away all EXIF data
 // (including the orientation of the image). That means, pics taken in portrait

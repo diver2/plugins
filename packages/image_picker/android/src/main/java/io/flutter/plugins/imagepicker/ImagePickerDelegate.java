@@ -12,12 +12,15 @@ import android.content.pm.ResolveInfo;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.provider.MediaStore;
+
 import androidx.annotation.VisibleForTesting;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
+
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -64,15 +67,22 @@ import java.util.UUID;
  */
 public class ImagePickerDelegate
     implements PluginRegistry.ActivityResultListener,
-        PluginRegistry.RequestPermissionsResultListener {
-  @VisibleForTesting static final int REQUEST_CODE_CHOOSE_IMAGE_FROM_GALLERY = 2342;
-  @VisibleForTesting static final int REQUEST_CODE_TAKE_IMAGE_WITH_CAMERA = 2343;
-  @VisibleForTesting static final int REQUEST_EXTERNAL_IMAGE_STORAGE_PERMISSION = 2344;
-  @VisibleForTesting static final int REQUEST_CODE_CHOOSE_VIDEO_FROM_GALLERY = 2352;
-  @VisibleForTesting static final int REQUEST_CODE_TAKE_VIDEO_WITH_CAMERA = 2353;
-  @VisibleForTesting static final int REQUEST_EXTERNAL_VIDEO_STORAGE_PERMISSION = 2354;
+    PluginRegistry.RequestPermissionsResultListener {
+  @VisibleForTesting
+  static final int REQUEST_CODE_CHOOSE_IMAGE_FROM_GALLERY = 2342;
+  @VisibleForTesting
+  static final int REQUEST_CODE_TAKE_IMAGE_WITH_CAMERA = 2343;
+  @VisibleForTesting
+  static final int REQUEST_EXTERNAL_IMAGE_STORAGE_PERMISSION = 2344;
+  @VisibleForTesting
+  static final int REQUEST_CODE_CHOOSE_VIDEO_FROM_GALLERY = 2352;
+  @VisibleForTesting
+  static final int REQUEST_CODE_TAKE_VIDEO_WITH_CAMERA = 2353;
+  @VisibleForTesting
+  static final int REQUEST_EXTERNAL_VIDEO_STORAGE_PERMISSION = 2354;
 
-  @VisibleForTesting final String fileProviderName;
+  @VisibleForTesting
+  final String fileProviderName;
 
   private final Activity activity;
   private final File externalFilesDirectory;
@@ -123,7 +133,7 @@ public class ImagePickerDelegate
 
           @Override
           public void askForPermission(String permissionName, int requestCode) {
-            ActivityCompat.requestPermissions(activity, new String[] {permissionName}, requestCode);
+            ActivityCompat.requestPermissions(activity, new String[]{permissionName}, requestCode);
           }
         },
         new IntentResolver() {
@@ -142,7 +152,7 @@ public class ImagePickerDelegate
           public void getFullImagePath(final Uri imageUri, final OnPathReadyListener listener) {
             MediaScannerConnection.scanFile(
                 activity,
-                new String[] {imageUri.getPath()},
+                new String[]{imageUri.getPath()},
                 null,
                 new MediaScannerConnection.OnScanCompletedListener() {
                   @Override
@@ -373,7 +383,7 @@ public class ImagePickerDelegate
       // is path a valid path / can I read from it?
       if (path == null || !(new File(path).canRead())) {
         finishWithError("ACCESS_ERROR",
-                "Cannot read your photo. Please pick one in the gallery, not in other folders such as downloads. Some Android versions mishandle those folders.");
+            "Cannot read your photo. Please pick one in the gallery, not in other folders such as downloads. Some Android versions mishandle those folders.");
         return;
       }
 
@@ -436,7 +446,7 @@ public class ImagePickerDelegate
       Double maxHeight = methodCall.argument("maxHeight");
 
       //String finalImagePath = imageResizer.resizeImageIfNeeded(path, maxWidth, maxHeight);
-      byte[] finalImage = imageResizer.resizeImageIfNeeded(path, maxWidth, maxHeight);
+      byte[] finalImage = imageResizer.resizeAndRotateImage(path, maxWidth, maxHeight);
       //TEMP CODE
       //byte[] result = readBytesFromFile(finalImagePath);
       //pendingResult.success(result);
@@ -497,4 +507,7 @@ public class ImagePickerDelegate
     methodCall = null;
     pendingResult = null;
   }
+
+
+
 }

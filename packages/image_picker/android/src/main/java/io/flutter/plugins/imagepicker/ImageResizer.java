@@ -6,6 +6,11 @@ package io.flutter.plugins.imagepicker;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
+import android.provider.MediaStore;
+
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,114 +33,107 @@ class ImageResizer {
    * <p>If no resizing is needed, returns the path for the original image.
    */
 //  String resizeImageIfNeeded(String imagePath, Double maxWidth, Double maxHeight) {
-  byte[] resizeImageIfNeeded(String imagePath, Double maxWidth, Double maxHeight) {
+  byte[] resizeAndRotateImage(String imagePath, Double maxWidth, Double maxHeight) {
     boolean shouldScale = maxWidth != null || maxHeight != null;
-
-    if (!shouldScale) {
-      return readBytesFromFile(imagePath);
-    }
-/*
     try {
-      File scaledImage = resizedImage(imagePath, maxWidth, maxHeight);
-      exifDataCopier.copyExif(imagePath, scaledImage.getPath());
-
-      return scaledImage.getPath();
+      return resizedImage(imagePath, maxWidth, maxHeight, shouldScale);
     } catch (IOException e) {
-      throw new RuntimeException(e);
-    }*/
-    try {
-      return resizedImage(imagePath, maxWidth, maxHeight);
-    }
-    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
   //private File resizedImage(String path, Double maxWidth, Double maxHeight) throws IOException {
-  private byte[] resizedImage(String path, Double maxWidth, Double maxHeight) throws IOException {
-  Bitmap bmp = BitmapFactory.decodeFile(path);
-    double originalWidth = bmp.getWidth() * 1.0;
-    double originalHeight = bmp.getHeight() * 1.0;
+  private byte[] resizedImage(String path, Double maxWidth, Double maxHeight,
+                              boolean shouldScale) throws IOException {
+    Bitmap finalBmp;
+    BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inPreferredConfig = Bitmap.Config.ARGB_8888;
 
-    boolean hasMaxWidth = maxWidth != null;
-    boolean hasMaxHeight = maxHeight != null;
+    //scale
+    if (shouldScale) {
+      Bitmap bmp = BitmapFactory.decodeFile(path, options);
+      double originalWidth = bmp.getWidth() * 1.0;
+      double originalHeight = bmp.getHeight() * 1.0;
 
-    Double width = hasMaxWidth ? Math.min(originalWidth, maxWidth) : originalWidth;
-    Double height = hasMaxHeight ? Math.min(originalHeight, maxHeight) : originalHeight;
+      boolean hasMaxWidth = maxWidth != null;
+      boolean hasMaxHeight = maxHeight != null;
 
-    boolean shouldDownscaleWidth = hasMaxWidth && maxWidth < originalWidth;
-    boolean shouldDownscaleHeight = hasMaxHeight && maxHeight < originalHeight;
-    boolean shouldDownscale = shouldDownscaleWidth || shouldDownscaleHeight;
+      Double width = hasMaxWidth ? Math.min(originalWidth, maxWidth) : originalWidth;
+      Double height = hasMaxHeight ? Math.min(originalHeight, maxHeight) : originalHeight;
 
-    if (shouldDownscale) {
-      double downscaledWidth = (height / originalHeight) * originalWidth;
-      double downscaledHeight = (width / originalWidth) * originalHeight;
+      boolean shouldDownscaleWidth = hasMaxWidth && maxWidth < originalWidth;
+      boolean shouldDownscaleHeight = hasMaxHeight && maxHeight < originalHeight;
+      boolean shouldDownscale = shouldDownscaleWidth || shouldDownscaleHeight;
 
-      if (width < height) {
-        if (!hasMaxWidth) {
-          width = downscaledWidth;
+      if (shouldDownscale) {
+        double downscaledWidth = (height / originalHeight) * originalWidth;
+        double downscaledHeight = (width / originalWidth) * originalHeight;
+
+        if (width < height) {
+          if (!hasMaxWidth) {
+            width = downscaledWidth;
+          } else {
+            height = downscaledHeight;
+          }
+        } else if (height < width) {
+          if (!hasMaxHeight) {
+            height = downscaledHeight;
+          } else {
+            width = downscaledWidth;
+          }
         } else {
-          height = downscaledHeight;
-        }
-      } else if (height < width) {
-        if (!hasMaxHeight) {
-          height = downscaledHeight;
-        } else {
-          width = downscaledWidth;
-        }
-      } else {
-        if (originalWidth < originalHeight) {
-          width = downscaledWidth;
-        } else if (originalHeight < originalWidth) {
-          height = downscaledHeight;
+          if (originalWidth < originalHeight) {
+            width = downscaledWidth;
+          } else if (originalHeight < originalWidth) {
+            height = downscaledHeight;
+          }
         }
       }
+      finalBmp = Bitmap.createScaledBitmap(bmp, width.intValue(), height.intValue(), false);
+    } else {
+      finalBmp = BitmapFactory.decodeFile(path, options);
     }
 
-    Bitmap scaledBmp = Bitmap.createScaledBitmap(bmp, width.intValue(), height.intValue(), false);
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    boolean saveAsPNG = bmp.hasAlpha();
-    scaledBmp.compress(
-        saveAsPNG ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG, 100, outputStream);
+    //get orientation + rotate
+    int orientation = getOrientation(path);
+    Bitmap rotatedBitmap = rotateImage(finalBmp,orientation);
 
-    byte[] byteArray = outputStream.toByteArray();
-    outputStream.close();
-    scaledBmp.recycle();
+    //put bitmap into byte []
+    ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+    rotatedBitmap.compress(Bitmap.CompressFormat.PNG, 100, outStream);
+    byte[] byteArray = outStream.toByteArray();
+
+    //end stuff
+    rotatedBitmap.recycle();
+    finalBmp.recycle();
+    outStream.close();
     return byteArray;
-    /*
-    String[] pathParts = path.split("/");
-    String imageName = pathParts[pathParts.length - 1];
-
-    File imageFile = new File(externalFilesDirectory, "/scaled_" + imageName);
-    FileOutputStream fileOutput = new FileOutputStream(imageFile);
-    fileOutput.write(outputStream.toByteArray());
-    fileOutput.close();
-
-    return imageFile;
-    */
   }
 
-  // transform a File into a byte array (personal note, it was private static byte[] before...)
-  private byte[] readBytesFromFile(String filePath) {
-    FileInputStream fileInputStream = null;
-    byte[] bytesArray = null;
-    try {
-      File file = new File(filePath);
-      bytesArray = new byte[(int) file.length()];
-      //read file into bytes[]
-      fileInputStream = new FileInputStream(file);
-      fileInputStream.read(bytesArray);
-    } catch (IOException e) {
-      e.printStackTrace();
-    } finally {
-      if (fileInputStream != null) {
-        try {
-          fileInputStream.close();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
+  private Bitmap performRotation(Bitmap source, float angle) {
+    Matrix matrix = new Matrix();
+    matrix.postRotate(angle);
+    return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(),
+        matrix, true);
+  }
+
+  private int getOrientation(String path) throws IOException {
+    ExifInterface ei = new ExifInterface(path);
+    return ei.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+        ExifInterface.ORIENTATION_UNDEFINED);
+  }
+
+  private Bitmap rotateImage(Bitmap bitmap, int orientation) {
+    switch (orientation) {
+      case ExifInterface.ORIENTATION_ROTATE_90:
+        return performRotation(bitmap, 90);
+      case ExifInterface.ORIENTATION_ROTATE_180:
+        return performRotation(bitmap, 180);
+      case ExifInterface.ORIENTATION_ROTATE_270:
+        performRotation(bitmap, 270);
+      case ExifInterface.ORIENTATION_NORMAL:
+      default:
+        return bitmap;
     }
-    return bytesArray;
   }
 }
