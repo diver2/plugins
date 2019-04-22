@@ -4,6 +4,7 @@
 
 package io.flutter.plugins.imagepicker;
 
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
@@ -25,7 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-
+import android.os.Environment;
 /**
  * A delegate class doing the heavy lifting for the plugin.
  *
@@ -282,7 +283,8 @@ public class ImagePickerDelegate
       return;
     }
 
-    File imageFile = createTemporaryWritableImageFile();
+//    File imageFile = createTemporaryWritableImageFile();
+    File imageFile = createWritableFile(".jpg");
     pendingCameraMediaUri = Uri.parse("file:" + imageFile.getAbsolutePath());
 
     Uri imageUri = fileUriResolver.resolveFileProviderUriForFile(fileProviderName, imageFile);
@@ -311,6 +313,12 @@ public class ImagePickerDelegate
     }
 
     return image;
+  }
+
+  private File createWritableFile(String suffix) {
+    String filename = UUID.randomUUID().toString()+suffix;
+    String dir = Environment.getExternalStorageDirectory() + "/" + Environment.DIRECTORY_DCIM + "/";
+    return new File(dir,filename);
   }
 
   private void grantUriPermissions(Intent intent, Uri imageUri) {
