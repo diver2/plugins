@@ -45,6 +45,9 @@ class ImageResizer {
   //private File resizedImage(String path, Double maxWidth, Double maxHeight) throws IOException {
   private byte[] resizedImage(String path, Double maxWidth, Double maxHeight,
                               boolean shouldScale) throws IOException {
+    //get orientation
+    int orientation = getOrientation(path);
+
     Bitmap finalBmp;
     BitmapFactory.Options options = new BitmapFactory.Options();
     options.inPreferredConfig = Bitmap.Config.ARGB_8888;
@@ -93,9 +96,7 @@ class ImageResizer {
     } else {
       finalBmp = BitmapFactory.decodeFile(path, options);
     }
-
-    //get orientation + rotate
-    int orientation = getOrientation(path);
+    // rotate whatever we need (according to path orientation)
     Bitmap rotatedBitmap = rotateImage(finalBmp,orientation);
 
     //put bitmap into byte []
@@ -130,7 +131,7 @@ class ImageResizer {
       case ExifInterface.ORIENTATION_ROTATE_180:
         return performRotation(bitmap, 180);
       case ExifInterface.ORIENTATION_ROTATE_270:
-        performRotation(bitmap, 270);
+        return performRotation(bitmap, 270);
       case ExifInterface.ORIENTATION_NORMAL:
       default:
         return bitmap;
