@@ -20,6 +20,7 @@ static const int SOURCE_GALLERY = 1;
     NSDictionary *_arguments;
     UIImagePickerController *_imagePickerController;
     UIViewController *_viewController;
+    int imageSource;
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
@@ -58,7 +59,7 @@ static const int SOURCE_GALLERY = 1;
         _result = result;
         _arguments = call.arguments;
         
-        int imageSource = [[_arguments objectForKey:@"source"] intValue];
+        imageSource = [[_arguments objectForKey:@"source"] intValue];
         
         switch (imageSource) {
             case SOURCE_CAMERA:
@@ -85,7 +86,7 @@ static const int SOURCE_GALLERY = 1;
         _result = result;
         _arguments = call.arguments;
         
-        int imageSource = [[_arguments objectForKey:@"source"] intValue];
+        imageSource = [[_arguments objectForKey:@"source"] intValue];
         
         switch (imageSource) {
             case SOURCE_CAMERA:
@@ -196,12 +197,10 @@ didFinishPickingMediaWithInfo:(NSDictionary<NSString *, id> *)info {
         }
         image = [self normalizedImage:image];
         
-        NSNumber *maxWidth = [_arguments objectForKey:@"maxWidth"];
-        NSNumber *maxHeight = [_arguments objectForKey:@"maxHeight"];
-        
-        if (maxWidth != (id)[NSNull null] || maxHeight != (id)[NSNull null]) {
-            image = [self scaledImage:image maxWidth:maxWidth maxHeight:maxHeight];
+        if (imageSource == SOURCE_CAMERA) {
+            UIImageWriteToSavedPhotosAlbum(image, nil, nil,nil);
         }
+        
         /*
          BOOL saveAsPNG = [self hasAlpha:image];
          NSData *data =
@@ -220,6 +219,14 @@ didFinishPickingMediaWithInfo:(NSDictionary<NSString *, id> *)info {
          details:nil]);
          }
          */
+        
+        NSNumber *maxWidth = [_arguments objectForKey:@"maxWidth"];
+        NSNumber *maxHeight = [_arguments objectForKey:@"maxHeight"];
+        
+        if (maxWidth != (id)[NSNull null] || maxHeight != (id)[NSNull null]) {
+            image = [self scaledImage:image maxWidth:maxWidth maxHeight:maxHeight];
+        }
+        
         NSData *data = UIImagePNGRepresentation(image);
         _result([FlutterStandardTypedData typedDataWithBytes:data]);
     }
