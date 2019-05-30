@@ -46,6 +46,8 @@ class ImageResizer {
   private byte[] resizedImage(String path, Double maxWidth, Double maxHeight,
                               boolean shouldScale) throws IOException {
     //get orientation
+    //System.out.println("Im too sexy for my love333");
+
     int orientation = getOrientation(path);
 
     Bitmap finalBmp;
